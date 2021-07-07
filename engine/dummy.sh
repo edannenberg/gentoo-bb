@@ -85,9 +85,9 @@ function run_image() {
     auto_rm="${3:-true}"
     container_name="$4"
     msg "running dummy image: ${image_id} with"
-    msg " mounts: ${_container_mounts[@]}"
-    msg " env: ${container_env[@]}"
-    msg " cmd: ${container_cmd[@]}"
+    msg " mounts: ${_container_mounts[*]}"
+    msg " env: ${container_env[*]}"
+    msg " cmd: ${container_cmd[*]}"
 }
 
 

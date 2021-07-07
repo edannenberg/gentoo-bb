@@ -1,0 +1,56 @@
+name: Ebuild Tests
+
+on:
+  push:
+    branches:
+      - '**'
+    tags-ignore:
+      - '*.*'
+    paths-ignore:
+      - 'README.md'
+      - 'LICENSE'
+      - '.github/**'
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+    # Check out the repository
+    - uses: actions/checkout@master
+
+    # Prepare the environment
+    - name: Prepare
+      id: prepare
+      run: |
+        echo "::set-output name=datetime::$(date +"%Y%m%d%H%M")"
+        echo "::set-output name=workspace::${GITHUB_WORKSPACE}"
+        mkdir -p "${GITHUB_WORKSPACE}/distfiles" "${GITHUB_WORKSPACE}/binpkgs"
+
+    # Cache distfiles and binary packages
+    - name: Cache distfiles
+      id: cache-distfiles
+      uses: gerbal/always-cache@v1.0.3
+      with:
+        path: ${{ steps.prepare.outputs.workspace }}/distfiles
+        key: distfiles-${{ steps.prepare.outputs.datetime }}
+        restore-keys: |
+          distfiles-${{ steps.prepare.outputs.datetime }}
+          distfiles
+    - name: Cache binpkgs
+      id: cache-binpkgs
+      uses: gerbal/always-cache@v1.0.3
+      with:
+        path: ${{ steps.prepare.outputs.workspace }}/binpkgs
+        key: binpkgs-${{ steps.prepare.outputs.datetime }}
+        restore-keys: |
+          binpkgs-${{ steps.prepare.outputs.datetime }}
+          binpkgs
+
+    # Run the ebuild tests
+    - uses: hacking-gentoo/action-ebuild-test@v1
+      env:
+        CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+      with:
+        auth_token: ${{ secrets.PR_TOKEN }}
+        deploy_key: ${{ secrets.DEPLOY_KEY }}
+        overlay_repo: HackingM/kubler-overlay

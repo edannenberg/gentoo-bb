@@ -56,7 +56,7 @@ function _bc_kubler_match_all() {
     i=0
     loop_max="${#text}"
     for (( ; ; )); do
-        [[ "${text_step}" =~ $pattern ]]
+        [[ "${text_step}" =~ $pattern ]] || true
         regex_computed="${BASH_REMATCH[0]}"
         [[ "${#BASH_REMATCH[*]}" -eq 0 ]] && break
         r_match[i]="${BASH_REMATCH[1]}"
@@ -73,10 +73,10 @@ function _bc_kubler_init()
     local regex_cmds help_output command cmd_opts
     _bc_kubler_init_ns_vars
     regex_cmds=',(--[a-z0-9-]*):'
-    for command in ${_bc_kubler_cmds[@]}; do
-        help_output="$(KUBLER_BC_HELP=false kubler "${command}" --help)"
+    for command in "${_bc_kubler_cmds[@]}"; do
+        help_output="$(KUBLER_BC_HELP=false ${KUBLER_TEST_BIN:-kubler} "${command}" --help)"
         _bc_kubler_match_all "${regex_cmds}" "${help_output}"
-        cmd_opts="${___bc_kubler_match_all[@]}"
+        cmd_opts="${___bc_kubler_match_all[*]}"
         declare -g _bc_kubler_cmd_"${command//-/_}"_opts="${cmd_opts}"
     done
 }
@@ -91,13 +91,13 @@ function _bc_kubler_init_ns_vars() {
     _bc_kubler_scan_wdir_in_compwords
     [[ -n "${___bc_kubler_scan_wdir_in_compwords}" ]] \
         && help_args+=( '--working-dir' "${___bc_kubler_scan_wdir_in_compwords}" )
-    help_output="$(KUBLER_BC_HELP=true kubler "${help_args[@]}" --help)"
+    help_output="$(KUBLER_BC_HELP=true ${KUBLER_TEST_BIN:-kubler} "${help_args[@]}" --help)"
     readarray -t parsed_help <<< "${help_output}"
     _bc_kubler_dir="${parsed_help[0]}"
     _bc_kubler_working_dir="${parsed_help[1]}"
     _bc_kubler_ns_type="${parsed_help[2]}"
     _bc_kubler_ns_default="${parsed_help[3]}"
-    readarray -t _bc_kubler_cmds <<< "${parsed_help[4]}"
+    IFS=' ' read -r -a _bc_kubler_cmds <<< "${parsed_help[4]}"
 }
 
 # complete a kubler namespace
@@ -129,6 +129,11 @@ function _bc_kubler_comp_image() {
     ___bc_kubler_comp_image="$(find "${current_image_path}" -maxdepth 1 -mindepth 1 -type d ! -name '.*' -printf '%f ')"
 }
 
+function _compopt_nospace() {
+    [[ -z "${KUBLER_TEST_BIN}" ]] && compopt -o nospace
+    return 0
+}
+
 function _kubler() {
     local cur prev kubler_global_opts kubler_cmds current_opts regex_cmds regex_opts current_cmd cmd_opts
     COMPREPLY=()
@@ -142,24 +147,24 @@ function _kubler() {
         if declare -f _filedir 1> /dev/null; then
             _filedir -d
         else
-            COMPREPLY=( $(compgen -o dirnames -- "${cur}") )
+            readarray -t COMPREPLY < <(compgen -o dirnames -- "${cur}")
         fi
         return
     fi
 
     # check for a completed kubler command
-    _bc_kubler_find_in_compwords "${_bc_kubler_cmds}"
+    _bc_kubler_find_in_compwords "${_bc_kubler_cmds[*]}"
     if [[ -z "${___bc_kubler_find_in_compwords}" ]]; then
         case "${cur}" in
             # complete global args
-            --*)    COMPREPLY=( $(compgen -W "${kubler_global_opts}" -- ${cur}) )
+            --*)    readarray -t COMPREPLY < <(compgen -W "${kubler_global_opts}" -- "${cur}")
                     ;;
             # complete commands
             *)      if [[ "${_bc_kubler_ns_type}" == 'none' ]];then
                         # only new command allowed if we are not in a kubler ns dir
-                        COMPREPLY=( $(compgen -W "new" -- ${cur}) )
+                        readarray -t COMPREPLY < <(compgen -W "new" -- "${cur}")
                     else
-                        COMPREPLY=( $(compgen -W "${_bc_kubler_cmds}" -- ${cur}) )
+                        readarray -t COMPREPLY < <(compgen -W "${_bc_kubler_cmds[*]}" -- "${cur}")
                     fi
                     ;;
         esac
@@ -169,36 +174,36 @@ function _kubler() {
         current_cmd="${___bc_kubler_find_in_compwords}"
         case "${current_cmd}:${cur}" in
             *:--*)  current_opts="_bc_kubler_cmd_${current_cmd//-/_}_opts";
-                    COMPREPLY=( $(compgen -W "${!current_opts}" -- ${cur}) )
+                    readarray -t COMPREPLY < <(compgen -W "${!current_opts}" -- "${cur}")
                 ;;
             build:*/*)  _bc_kubler_comp_image
                         cur="${cur#*/}"
-                        COMPREPLY=( $(compgen -P "${COMP_WORDS[COMP_CWORD]%/*}/" -W "${___bc_kubler_comp_image}" -- ${cur}) )
+                        readarray -t COMPREPLY < <(compgen -P "${COMP_WORDS[COMP_CWORD]%/*}/" -W "${___bc_kubler_comp_image}" -- "${cur}")
                 ;;
             clean:*)  [[ "${prev}" == '-i' || "${prev}" == '--image-ns' ]] && \
-                            _bc_kubler_comp_namespace && compopt -o nospace && COMPREPLY=( $(compgen -W "${___bc_kubler_comp_namespace}" -- ${cur}) )
+                            _bc_kubler_comp_namespace && _compopt_nospace && readarray -t COMPREPLY < <(compgen -W "${___bc_kubler_comp_namespace}" -- "${cur}")
                 ;;
             push:*/*)  _bc_kubler_comp_image
                         cur="${cur#*/}"
-                        COMPREPLY=( $(compgen -P "${COMP_WORDS[COMP_CWORD]%/*}/" -W "${___bc_kubler_comp_image}" -- ${cur}) )
+                        readarray -t COMPREPLY < <(compgen -P "${COMP_WORDS[COMP_CWORD]%/*}/" -W "${___bc_kubler_comp_image}" -- "${cur}")
                 ;;
             dep-graph:*/*)
                 _bc_kubler_comp_image
                 cur="${cur#*/}"
-                COMPREPLY=( $(compgen -P "${COMP_WORDS[COMP_CWORD]%/*}/" -W "${___bc_kubler_comp_image}" -- ${cur}) )
+                readarray -t COMPREPLY < <(compgen -P "${COMP_WORDS[COMP_CWORD]%/*}/" -W "${___bc_kubler_comp_image}" -- "${cur}")
                 ;;
             new:*)  cmd_opts='builder image namespace'
                     [[ "${_bc_kubler_ns_type}" == 'none' ]] && cmd_opts='namespace'
                     [[ "${_bc_kubler_ns_type}" == 'single' ]] && cmd_opts='builder image'
                     if [[ "${prev}" == 'image' || "${prev}" == 'builder' ]]; then
-                        _bc_kubler_comp_namespace && compopt -o nospace && COMPREPLY=( $(compgen -W "${___bc_kubler_comp_namespace}" -- ${cur}) )
+                        _bc_kubler_comp_namespace && _compopt_nospace && readarray -t COMPREPLY < <(compgen -W "${___bc_kubler_comp_namespace}" -- "${cur}")
                     else
                         _bc_kubler_find_in_compwords "${cmd_opts}"
-                        [[ -z "${___bc_kubler_find_in_compwords}" ]] && COMPREPLY=( $(compgen -W "${cmd_opts}" -- ${cur}) )
+                        [[ -z "${___bc_kubler_find_in_compwords}" ]] && readarray -t COMPREPLY < <(compgen -W "${cmd_opts}" -- "${cur}")
                     fi
                 ;;
             *:*)    [[ "${current_cmd}" = 'build' || "${current_cmd}" = 'dep-graph' || "${current_cmd}" = 'push' ]] && \
-                        _bc_kubler_comp_namespace && compopt -o nospace && COMPREPLY=( $(compgen -W "${___bc_kubler_comp_namespace}" -- ${cur}) )
+                        _bc_kubler_comp_namespace && _compopt_nospace && readarray -t COMPREPLY < <(compgen -W "${___bc_kubler_comp_namespace}" -- "${cur}")
                 ;;
         esac
     fi
@@ -207,4 +212,5 @@ function _kubler() {
 
 _bc_kubler_init
 
-complete -F _kubler kubler kubler.sh
+[[ -z "${KUBLER_TEST_BIN}" ]] && complete -F _kubler kubler kubler.sh
+true

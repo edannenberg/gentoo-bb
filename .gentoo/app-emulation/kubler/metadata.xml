@@ -1,0 +1,18 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!DOCTYPE pkgmetadata SYSTEM "http://www.gentoo.org/dtd/metadata.dtd">
+<pkgmetadata>
+	<maintainer type="person">
+		<email>erik.dannenberg@xtrade-gmbh.de</email>
+	</maintainer>
+	<longdescription lang="en">
+		A generic, extendable build orchestrator.
+	</longdescription>
+	<use>
+		<flag name="docker">Support Docker as build engine</flag>
+		<flag name="podman">Support libpod as build engine</flag>
+		<flag name="rlwrap">Optional rlwrap support for input history</flag>
+	</use>
+	<upstream>
+		<remote-id type="github">edannenberg/kubler</remote-id>
+	</upstream>
+</pkgmetadata>

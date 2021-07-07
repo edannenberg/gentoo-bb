@@ -1,0 +1,21 @@
+name: Shellcheck
+
+on:
+  push:
+    branches:
+      - '**'
+    tags-ignore:
+      - '*.*'
+    paths-ignore:
+      - 'README.md'
+      - 'LICENSE'
+      - '.github/**'
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@master
+    - uses: hacking-actions/shellcheck@master
+      with:
+        shellcheck_options: "-s bash -x -e SC2034,SC2154"

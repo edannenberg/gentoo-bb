@@ -2,31 +2,48 @@
 # Copyright (c) 2014-2019, Erik Dannenberg <erik.dannenberg@xtrade-gmbh.de>
 # All rights reserved.
 
-# Check image dependencies and populate global var _dep_graph. Recursive.
+# Check image dependencies for an image and populate global var _dep_graph. Recursive.
 #
 # Arguments:
 #
 # 1: image_id
-# 2: previous_image_id
-function check_image_dependencies() {
-    local image_id previous_image
+function _check_image_dependencies() {
+    local image_id
     image_id="$1"
-    previous_image="$2"
-    if [[ "${image_id}" != 'scratch' ]]; then
-        expand_image_id "${image_id}" "${_IMAGE_PATH}"
-        # shellcheck disable=SC2154
-        source_image_conf "${__expand_image_id}"
-
-        if [[ -n "${IMAGE_PARENT}" ]]; then
-            # skip further checking if already processed
-            if ! is_in_array "${image_id}" "${_dep_graph[@]}"; then
-                # check parent image dependencies
-                check_image_dependencies "${IMAGE_PARENT}" "${image_id}"
-                # finally add the image
-                [[ "${previous_image}" != "" ]] && _dep_graph+=( "${image_id}" )
-            fi
-        fi
+    
+    # skip further checking if already processed
+    if is_in_array "${image_id}" "${_processed_images[@]}"; then
+        return
     fi
+    _processed_images+=( "${image_id}" )
+    
+    if [[ "${image_id}" == 'scratch' ]]; then
+        return
+    fi
+    
+    expand_image_id "${image_id}" "${_IMAGE_PATH}"
+    # shellcheck disable=SC2154
+    source_image_conf "${__expand_image_id}"
+
+    if [[ -n "${IMAGE_PARENT}" ]]; then
+        # check parent image dependencies
+        _check_image_dependencies "${IMAGE_PARENT}"
+    fi
+    
+    # finally add the image
+    _dep_graph+=( "${image_id}" )
+}
+
+# Check image dependencies for a list of images and populate global var _dep_graph.
+#
+# Arguments:
+#
+# 1..n: image_id
+function check_image_dependencies() {
+    declare -a _processed_images
+    for image_id in "$@"; do
+        _check_image_dependencies "${image_id}"
+    done
 }
 
 function main() {
@@ -45,10 +62,7 @@ function main() {
     declare -a _dep_graph
 
     # shellcheck disable=SC2154
-    for image_id in "${__expand_requested_target_ids[@]}"; do
-        check_image_dependencies "${image_id}"
-        ! is_in_array "${image_id}" "${_dep_graph[@]}" && _dep_graph+=( "${image_id}" )
-    done
+    check_image_dependencies "${__expand_requested_target_ids[@]}"
 
     dotstring="strict digraph imagedeps {\n    rankdir=LR;"
 
