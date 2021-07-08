@@ -1,4 +1,4 @@
-#!/usr/bin/env sh
+#!/usr/bin/env bash
 set -eo pipefail
 
 # Do some tests and exit with either 0 for healthy or 1 for unhealthy
