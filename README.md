@@ -70,11 +70,11 @@ Optional:
 * GPG for download verification
 * rlwrap for command history
 
-#### Docker
+#### Docker or Podman
 
-* Working Docker setup
+* Working Docker or Podman setup
 * Git
-* jq to parse Docker json output
+* jq to parse Docker/Podman json output
 
 ## Installation
 
@@ -132,14 +132,14 @@ located at `/etc/kubler.conf`. If the file doesn't exist the `kubler.conf` file 
 used as a fallback.
 
 All of Kubler's runtime data, like user config overrides, downloads or custom scripts, is kept at a path defined
-via `KUBLER_DATA_DIR`. This defaults to `~/.kubler/`, which is suitable if user accounts have Docker access on the host.
-If you plan to use Docker/Kubler only with `sudo`, like on a server, you may want to use `/var/lib/kubler`, or some other location, as data dir instead.
+via `KUBLER_DATA_DIR`. This defaults to `~/.kubler/`, which is suitable if user accounts have Docker/Podman access on the host.
+If you plan to use Docker/Podman/Kubler only with `sudo`, like on a server, you may want to use `/var/lib/kubler`, or some other location, as data dir instead.
 
 Managing your `KUBLER_DATA_DIR` with a VCS tool like Git is supported, a proper `.gitignore` is added on initialization.
 
 #### Uninstall
 
-1. Remove any build artifacts and Docker images created by Kubler:
+1. Remove any build artifacts and container images created by Kubler:
 
 ```
     $ kubler clean -N
@@ -173,7 +173,8 @@ expected.
 A `--working-dir` is considered valid if it has a `kubler.conf` file and either an `images/` dir, or
 one ore more namespace dirs, which are just a collection of images.
 
-As Kubler currently only ships with a Docker build engine the rest of this tour will focus on building Docker images,
+Kubler currently ships with Docker and Podman build engines.
+The rest of this tour will focus on building Docker images,
 it's worth noting that the build process may be completely different, i.e. it may not involve Gentoo or Docker at all,
 for other build engines.
 
