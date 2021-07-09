@@ -552,6 +552,7 @@ function run_image() {
     [[ "${auto_rm}" == "true" ]] && docker_args+=("--rm")
     [[ -n "${container_name}" ]] && docker_args+=("--name" "${container_name//\//-}")
     [[ "${BUILDER_CAPS_SYS_PTRACE}" == "true" ]] && docker_args+=('--cap-add' 'SYS_PTRACE')
+    [[ -n "${BUILDER_SECCOMP}" ]] && docker_args+=("--security-opt" "seccomp=${BUILDER_SECCOMP}")
     [[ "${_container_mount_portage}" == "true" ]] && docker_args+=("--volumes-from" "${_PORTAGE_IMAGE//\//-}")
     # shellcheck disable=SC2154
     [[ ${#_container_args[@]} -gt 0 ]] && docker_args+=("${_container_args[@]}")
